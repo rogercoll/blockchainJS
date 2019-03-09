@@ -7,10 +7,22 @@ class Block{
 		this.data = data;
 		this.previousHash = previousHash;
 		this.hash = this.calculateHash();
+		//Variable only used for Proof-of-work algorithm
+		this.nonce = 0;
 	}
 
 	calculateHash(){
-		return SHA256(this.index + this.timestamp + JSON.stringify(this.data) + this.previousHash).toString();
+		return SHA256(this.index + this.timestamp + JSON.stringify(this.data) + this.previousHash + this.nonce).toString();
+	}
+
+	//Proof-of-work
+	mineBlock(difficulty){
+		while(this.hash.substring(0,difficulty) !== Array(difficulty +1).join("0")){
+			++this.nonce;
+			this.hash = this.calculateHash()
+		}
+		
+		console.log("Mined block: " + this.hash);
 	}
 }
 
@@ -18,6 +30,7 @@ class Block{
 class Blockchain{
 	constructor(){
 		this.chain = [this.createGenesisBlock()];
+		this.difficulty = 2;
 	}
 
 	createGenesisBlock(){
@@ -31,7 +44,7 @@ class Blockchain{
 	
 	addBlock(newBlock){
 		newBlock.previousHash = this.getLatestBlock().hash;
-		newBlock.hash = newBlock.calculateHash();
+		newBlock.mineBlock(this.difficulty);
 		this.chain.push(newBlock);
 	}
 
@@ -49,12 +62,15 @@ class Blockchain{
 		}
 		return true;
 	}
+
 }
 
 
 let chainTest = new Blockchain()
-chainTest.addBlock(new Block(1,"10/03/2019",{id: "403", vote: "PP"}))
-chainTest.addBlock(new Block(2,"10/03/2019",{id: "432", vote: "Podemos"}))
+console.log("Mining block 1...");
+chainTest.addBlock(new Block(1,"10/03/2019",{id: "403", vote: "PP"}));
+console.log("Mining block 2...");
+chainTest.addBlock(new Block(2,"10/03/2019",{id: "432", vote: "Podemos"}));
 
 console.log(JSON.stringify(chainTest,null,4));
 console.log(chainTest.isChainValid());
