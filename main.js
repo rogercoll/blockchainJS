@@ -1,10 +1,20 @@
 const SHA256 = require('crypto-js/sha256')
 
+//In Bitcoin de pow algorithm makes that only is made one new block every 10 minutes
+//During this 10 minutes the transactions are added into a pending array for the following block
+
+class Transaction{
+	constructor(fromAddress, toAddress, amount){
+		this.fromAddress = fromAddress;
+		this.toAddress = toAddress;
+		this.amount = amount;
+	}
+} 
+
 class Block{
-	constructor(index, timestamp, data, previousHash =''){
-		this.index = index;
+	constructor(timestamp, transactions, previousHash =''){
 		this.timestamp = timestamp;
-		this.data = data;
+		this.transactions = transactions;
 		this.previousHash = previousHash;
 		this.hash = this.calculateHash();
 		//Variable only used for Proof-of-work algorithm
@@ -12,7 +22,7 @@ class Block{
 	}
 
 	calculateHash(){
-		return SHA256(this.index + this.timestamp + JSON.stringify(this.data) + this.previousHash + this.nonce).toString();
+		return SHA256(this.timestamp + JSON.stringify(this.transactions) + this.previousHash + this.nonce).toString();
 	}
 
 	//Proof-of-work
@@ -31,11 +41,13 @@ class Blockchain{
 	constructor(){
 		this.chain = [this.createGenesisBlock()];
 		this.difficulty = 2;
+		this.pendingTransactions = [];
+		this.miningReward = 100;
 	}
 
 	createGenesisBlock(){
 		//Genesis is the first block of the chain, ens el inventem
-		return new Block(0,"09/03/2018","Genesis Block","0");
+		return new Block("09/03/2018","Genesis Block","0");
 	}
 
 	getLatestBlock(){
@@ -46,6 +58,36 @@ class Blockchain{
 		newBlock.previousHash = this.getLatestBlock().hash;
 		newBlock.mineBlock(this.difficulty);
 		this.chain.push(newBlock);
+	}
+
+	minePendingTransactions(miningRewardAddress){
+		let block = new Block(Date.now(),this.pendingTransactions);
+		block.mineBlock(this.difficulty);
+		console.log("Block mined successfully!");
+		this.chain.push(block);
+		this.pendingTransactions = [
+			new Transaction(null,miningRewardAddress,this.miningReward)
+		]
+		
+	}
+
+	createTransaction(transaction){
+		this.pendingTransactions.push(transaction);
+	}
+
+	getBalanceOfAddress(address){
+		let balance = 0;
+		for(const block of this.chain){
+			for(const trans of block.transactions){
+				if(trans.fromAddress === address){
+					balance -= trans.amount;
+				}
+				if(trans.toAddress === address){
+					balance += trans.amount;
+				}
+			}
+		}
+		return balance;
 	}
 
 	isChainValid(){
@@ -67,6 +109,7 @@ class Blockchain{
 
 
 let chainTest = new Blockchain()
+/*
 console.log("Mining block 1...");
 chainTest.addBlock(new Block(1,"10/03/2019",{id: "403", vote: "PP"}));
 console.log("Mining block 2...");
@@ -79,3 +122,16 @@ chainTest.chain[1].data = {id: "403", vote:"PSOE"};
 console.log(chainTest.isChainValid());
 chainTest.chain[1].hash = chainTest.chain[1].calculateHash();
 console.log(chainTest.isChainValid());
+*/
+
+chainTest.createTransaction(new Transaction('address1','address2',100));
+chainTest.createTransaction(new Transaction('address2','address1',5));
+
+console.log("Time to wake up the miner");
+chainTest.minePendingTransactions('roger31');
+console.log('Roger Balance: ' + chainTest.getBalanceOfAddress('roger31'));
+
+console.log("Time to wake up the miner");
+chainTest.minePendingTransactions('roger31');
+console.log('Roger Balance: ' + chainTest.getBalanceOfAddress('roger31'));
+
